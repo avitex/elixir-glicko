@@ -57,4 +57,14 @@ defmodule Glicko.PlayerTest do
 	test "scale rating deviation v2 -> v1" do
 		assert_in_delta Player.scale_rating_deviation_to(1.0, :v1), 173.7178, 0.1
 	end
+
+	test "rating interval" do
+		assert {rating_low, rating_high} =
+			[rating: 1850, rating_deviation: 50]
+			|> Player.new_v2
+			|> Player.rating_interval
+
+		assert_in_delta rating_low, 1750, 0.1
+		assert_in_delta rating_high, 1950, 0.1
+	end
 end

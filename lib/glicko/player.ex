@@ -108,6 +108,27 @@ defmodule Glicko.Player do
 	])
 
 	@doc """
+	A convenience function for summarizing a player's strength as a 95%
+	confidence interval.
+
+	The lowest value in the interval is the player's rating minus twice the RD,
+	and the highest value is the player's rating plus twice the RD.
+	The volatility measure does not appear in the calculation of this interval.
+
+	An example would be if a player's rating is 1850 and the RD is 50,
+	the interval would range from 1750 to 1950. We would then say that we're 95%
+	confident that the player's actual strength is between 1750 and 1950.
+
+	When a player has a low RD, the interval would be narrow, so that we would
+	be 95% confident about a player’s strength being in a small interval of values.
+	"""
+	@spec rating_interval(player :: t) :: {rating_low :: float, rating_high :: float}
+	def rating_interval(player), do: {
+		player.rating - player.rating_deviation * 2,
+		player.rating + player.rating_deviation * 2,
+	}
+
+	@doc """
 	Scales a players rating.
 	"""
 	@spec scale_rating_to(rating :: float, to_version :: :v1 | :v2) :: float
