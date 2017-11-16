@@ -28,14 +28,16 @@ defmodule Glicko do
 
 	defp do_new_rating(player = %Player{version: :v2}, results, opts) do
 		results = Enum.map(results, fn result ->
+			opponent = Player.to_v2(result.opponent)
+
 			result =
 				Map.new
-				|> Map.put(:opponent, Player.to_v2(result.opponent))
 				|> Map.put(:score, result.score)
+				|> Map.put(:opponent_rating, opponent.rating)
+				|> Map.put(:opponent_rating_deviation, opponent.rating_deviation)
+				|> Map.put(:opponent_rating_deviation_g, calc_g(opponent.rating_deviation))
 
-			result = Map.put(result, :opponent_rating_deviation_g, calc_g(result.opponent.rating_deviation))
-			result = Map.put(result, :e, calc_e(player, result))
-			result
+			Map.put(result, :e, calc_e(player, result))
 		end)
 
 		ctx =
@@ -153,7 +155,7 @@ defmodule Glicko do
 	end
 
 	defp calc_k(ctx, k) do
-		if calc_f(ctx, (ctx.alpha - k * ctx.system_constant)) < 0 do
+		if calc_f(ctx, ctx.alpha - k * ctx.system_constant) < 0 do
 			calc_k(ctx, k + 1)
 		else
 			k
@@ -167,6 +169,6 @@ defmodule Glicko do
 
 	# E function
 	defp calc_e(player, result) do
-		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player.rating - result.opponent.rating)))
+		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player.rating - result.opponent_rating)))
 	end
 end
