@@ -5,26 +5,28 @@ defmodule Glicko do
 		GameResult,
 	}
 
-	@epsilon 0.0000001
 	@default_system_constant 0.8
+	@default_convergence_tolerance 1.0e-7
+
+	@type new_rating_opts_t :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
 	Generate a new Rating from an existing rating and a series of results.
 	"""
-	@spec new_rating(player :: Player.t, results :: list(GameResult.t), sys_constant :: float) :: Player.t
-	def new_rating(player, results, sys_constant \\ @default_system_constant)
-	def new_rating(player = %Player{version: :v1}, results, sys_constant) do
+	@spec new_rating(player :: Player.t, results :: list(GameResult.t), opts :: new_rating_opts_t) :: Player.t
+	def new_rating(player, results, opts \\ [])
+	def new_rating(player = %Player{version: :v1}, results, opts) do
 		player
 		|> Player.to_v2
-		|> do_new_rating(results, sys_constant)
+		|> do_new_rating(results, opts)
 		|> Player.to_v1
 	end
 
-	def new_rating(player = %Player{version: :v2}, results, sys_constant) do
-		do_new_rating(player, results, sys_constant)
+	def new_rating(player = %Player{version: :v2}, results, opts) do
+		do_new_rating(player, results, opts)
 	end
 
-	defp do_new_rating(player = %Player{version: :v2}, results, sys_constant) do
+	defp do_new_rating(player = %Player{version: :v2}, results, opts) do
 		results = Enum.map(results, fn result ->
 			result =
 				Map.new
@@ -38,7 +40,8 @@ defmodule Glicko do
 
 		ctx =
 			Map.new
-			|> Map.put(:system_constant, sys_constant)
+			|> Map.put(:system_constant, Keyword.get(opts, :system_constant, @default_system_constant))
+			|> Map.put(:convergence_tolerance, Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance))
 			|> Map.put(:results, results)
 			|> Map.put(:player, player)
 			|> Map.put(:player_rating_deviation_squared, :math.pow(player.rating_deviation, 2))
@@ -134,7 +137,7 @@ defmodule Glicko do
 	end
 
 	defp iterative_algorithm_body(ctx, a, b, fa, fb) do
-		if abs(b - a) > @epsilon do
+		if abs(b - a) > ctx.convergence_tolerance do
 			c = a + (a - b) * fa / (fb - fa)
 			fc = calc_f(ctx, c)
 			{a, fa} =
