@@ -1,4 +1,27 @@
 defmodule Glicko do
+	@moduledoc """
+	Provides the implementation of the Glicko rating system.
+
+	See the [specification](http://www.glicko.net/glicko/glicko2.pdf) for implementation details.
+
+	## Usage
+
+	Get a players new rating after a series of matches in a rating period.
+
+		iex> results = [GameResult.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
+		...> GameResult.new(Player.new_v1([rating: 1550, rating_deviation: 100]), :loss),
+		...> GameResult.new(Player.new_v1([rating: 1700, rating_deviation: 300]), :loss)]
+		iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
+		iex> Glicko.new_rating(player, results, [system_constant: 0.5])
+		%Glicko.Player{version: :v1, rating: 1464.0506705393013, rating_deviation: 151.51652412385727, volatility: nil}
+
+	Get a players new rating when they haven't played within a rating period.
+
+		iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
+		iex> Glicko.new_rating(player, [], [system_constant: 0.5])
+		%Glicko.Player{version: :v1, rating: 1.5e3, rating_deviation: 200.27141669877065, volatility: nil}
+
+	"""
 
 	alias __MODULE__.{
 		Player,
@@ -11,7 +34,9 @@ defmodule Glicko do
 	@type new_rating_opts_t :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
-	Generate a new Rating from an existing rating and a series of results.
+	Generate a new rating from an existing rating and a series (or lack) of results.
+
+	Returns the updated player with the same version given to the function.
 	"""
 	@spec new_rating(player :: Player.t, results :: list(GameResult.t), opts :: new_rating_opts_t) :: Player.t
 	def new_rating(player, results, opts \\ [])

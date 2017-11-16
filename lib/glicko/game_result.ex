@@ -1,6 +1,6 @@
 defmodule Glicko.GameResult do
 	@moduledoc """
-	This module provides a representation of a game result against an opponent.
+	Provides a representation of a game result against an opponent.
 
 	## Usage
 
