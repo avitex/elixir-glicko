@@ -26,12 +26,14 @@ defmodule Glicko do
 
 	defp do_new_rating(player = %Player{version: :v2}, results, sys_constant) do
 		results = Enum.map(results, fn result ->
-			opponent = Player.to_v2(result.opponent)
-			%{
-				score: result.score,
-				opponent: opponent,
-				opponent_rating_deviation_g: calc_g(opponent.rating_deviation),
-			}
+			result =
+				Map.new
+				|> Map.put(:opponent, Player.to_v2(result.opponent))
+				|> Map.put(:score, result.score)
+
+			result = Map.put(result, :opponent_rating_deviation_g, calc_g(result.opponent.rating_deviation))
+			result = Map.put(result, :e, calc_e(player, result))
+			result
 		end)
 
 		ctx =
@@ -74,11 +76,10 @@ defmodule Glicko do
 	end
 
 	# Calculation of the estimated variance of the player's rating based on game outcomes
-	defp calc_variance_estimate(%{player: player, results: results}) do
+	defp calc_variance_estimate(%{results: results}) do
 		results
 		|> Enum.reduce(0.0, fn result, acc ->
-			tmp_e = calc_e(player, result)
-			acc + :math.pow(result.opponent_rating_deviation_g, 2) * tmp_e * (1 - tmp_e)
+			acc + :math.pow(result.opponent_rating_deviation_g, 2) * result.e * (1 - result.e)
 		end)
 		|> :math.pow(-1)
 	end
@@ -102,9 +103,9 @@ defmodule Glicko do
 		:math.exp(a / 2)
 	end
 
-	defp calc_results_effect(%{player: player, results: results}) do
+	defp calc_results_effect(%{results: results}) do
 		Enum.reduce(results, 0.0, fn result, acc ->
-			acc + result.opponent_rating_deviation_g * (result.score - calc_e(player, result))
+			acc + result.opponent_rating_deviation_g * (result.score - result.e)
 		end)
 	end
 
