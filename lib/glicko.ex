@@ -9,7 +9,7 @@ defmodule Glicko do
 	Players can be represented by either the convenience `Glicko.Player` module or a tuple (see `player_t`).
 	Results can be represented by either the convenience `Glicko.Result` module or a tuple (see `result_t`).
 
-	Get a players new rating after a series of matches in a rating period.
+	Get a player's new rating after a series of matches in a rating period.
 
 		iex> results = [Result.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
 		...> Result.new(Player.new_v1([rating: 1550, rating_deviation: 100]), :loss),
@@ -18,7 +18,7 @@ defmodule Glicko do
 		iex> Glicko.new_rating(player, results, [system_constant: 0.5])
 		%Glicko.Player{version: :v1, rating: 1464.0506705393013, rating_deviation: 151.51652412385727, volatility: nil}
 
-	Get a players new rating when they haven't played within a rating period.
+	Get a player's new rating when they haven't played within a rating period.
 
 		iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
 		iex> Glicko.new_rating(player, [], [system_constant: 0.5])

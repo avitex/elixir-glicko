@@ -172,14 +172,14 @@ defmodule Glicko.Player do
 	}
 
 	@doc """
-	Scales a players rating.
+	Scales a player's rating.
 	"""
 	@spec scale_rating_to(rating :: Glicko.rating_t, to_version :: Glicko.version_t) :: Glicko.rating_t
 	def scale_rating_to(rating, :v1), do: (rating * @magic_version_scale) + @magic_version_scale_rating
 	def scale_rating_to(rating, :v2), do: (rating - @magic_version_scale_rating) / @magic_version_scale
 
 	@doc """
-	Scales a players rating deviation.
+	Scales a player's rating deviation.
 	"""
 	@spec scale_rating_deviation_to(rating_deviation :: Glicko.rating_deviation_t, to_version :: Glicko.version_t) :: Glicko.rating_deviation_t
 	def scale_rating_deviation_to(rating_deviation, :v1), do: rating_deviation * @magic_version_scale
