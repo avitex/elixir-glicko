@@ -75,7 +75,8 @@ defmodule Glicko do
 
 	# Calculation of the estimated variance of the player's rating based on game outcomes
 	defp calc_variance_estimate(%{player: player, results: results}) do
-		Enum.reduce(results, 0.0, fn result, acc ->
+		results
+		|> Enum.reduce(0.0, fn result, acc ->
 			tmp_e = calc_e(player, result)
 			acc + :math.pow(result.opponent_rating_deviation_g, 2) * tmp_e * (1 - tmp_e)
 		end)
@@ -98,7 +99,7 @@ defmodule Glicko do
 	end
 
 	defp calc_new_player_volatility(%{a: a}) do
-		:math.exp(a/2)
+		:math.exp(a / 2)
 	end
 
 	defp calc_results_effect(%{player: player, results: results}) do
@@ -112,7 +113,7 @@ defmodule Glicko do
 	end
 
 	defp calc_new_player_rating_deviation(ctx) do
-		1/:math.sqrt(1/:math.pow(ctx.prerating_period, 2) + 1/ctx.variance_estimate)
+		1 / :math.sqrt(1 / :math.pow(ctx.prerating_period, 2) + 1 / ctx.variance_estimate)
 	end
 
 	defp calc_prerating_period(ctx) do
@@ -137,9 +138,9 @@ defmodule Glicko do
 			fc = calc_f(ctx, c)
 			{a, fa} =
 				if fc * fb < 0 do
-						{b, fb}
+					{b, fb}
 				else
-						{a, fa / 2}
+					{a, fa / 2}
 				end
 			iterative_algorithm_body(ctx, a, c, fa, fc)
 		else
