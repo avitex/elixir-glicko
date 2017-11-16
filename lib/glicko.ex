@@ -26,7 +26,15 @@ defmodule Glicko do
 		do_new_rating(player, results, opts)
 	end
 
-	defp do_new_rating(player = %Player{version: :v2}, results, opts) do
+	defp do_new_rating(player, [], _) do
+		player_post_rating_deviation =
+			Map.new
+			|> Map.put(:player_rating_deviation_squared, :math.pow(player.rating_deviation, 2))
+			|> calc_player_pre_rating_deviation(player.volatility)
+
+		%{player | rating_deviation: player_post_rating_deviation}
+	end
+	defp do_new_rating(player, results, opts) do
 		results = Enum.map(results, fn result ->
 			opponent = Player.to_v2(result.opponent)
 
@@ -68,7 +76,7 @@ defmodule Glicko do
 		# Step 5.5
 		ctx = Map.put(ctx, :new_player_volatility, calc_new_player_volatility(ctx))
 		# Step 6
-		ctx = Map.put(ctx, :prerating_period, calc_prerating_period(ctx))
+		ctx = Map.put(ctx, :player_pre_rating_deviation, calc_player_pre_rating_deviation(ctx, ctx.new_player_volatility))
 		# Step 7
 		ctx = Map.put(ctx, :new_player_rating_deviation, calc_new_player_rating_deviation(ctx))
 		ctx = Map.put(ctx, :new_player_rating, calc_new_player_rating(ctx))
@@ -119,11 +127,11 @@ defmodule Glicko do
 	end
 
 	defp calc_new_player_rating_deviation(ctx) do
-		1 / :math.sqrt(1 / :math.pow(ctx.prerating_period, 2) + 1 / ctx.variance_estimate)
+		1 / :math.sqrt(1 / :math.pow(ctx.player_pre_rating_deviation, 2) + 1 / ctx.variance_estimate)
 	end
 
-	defp calc_prerating_period(ctx) do
-		:math.sqrt((:math.pow(ctx.new_player_volatility, 2) + ctx.player_rating_deviation_squared))
+	defp calc_player_pre_rating_deviation(ctx, player_volatility) do
+		:math.sqrt((:math.pow(player_volatility, 2) + ctx.player_rating_deviation_squared))
 	end
 
 	defp iterative_algorithm_initial(ctx) do
