@@ -36,15 +36,21 @@ defmodule Glicko.Player do
 	@magic_version_scale 173.7178
 	@magic_version_scale_rating 1500.0
 
-	@default_v1_rating 1500.0
-	@default_v1_rating_deviation 350.0
-
-	@default_v2_volatility 0.06
-
 	@type t :: v1_t | v2_t
 
-	@type v1_t :: %__MODULE__{version: :v1, rating: float, rating_deviation: float, volatility: nil}
-	@type v2_t :: %__MODULE__{version: :v2, rating: float, rating_deviation: float, volatility: float}
+	@type v1_t :: %__MODULE__{
+		version: :v1,
+		rating: Glicko.rating_t,
+		rating_deviation: Glicko.rating_deviation_t,
+		volatility: nil,
+	}
+
+	@type v2_t :: %__MODULE__{
+		version: :v2,
+		rating: Glicko.rating_t,
+		rating_deviation: Glicko.rating_deviation_t,
+		volatility: Glicko.volatility_t,
+	}
 
 	defstruct [
 		:version,
@@ -54,30 +60,67 @@ defmodule Glicko.Player do
 	]
 
 	@doc """
+	The recommended initial rating value for a new player.
+	"""
+	@spec initial_rating(Glicko.version_t) :: Glicko.rating_t
+	def initial_rating(:v1), do: 1500.0
+	def initial_rating(:v2), do: initial_rating(:v1) |> scale_rating_to(:v2)
+
+	@doc """
+	The recommended initial rating deviation value for a new player.
+	"""
+	@spec initial_rating_deviation(Glicko.version_t) :: Glicko.rating_deviation_t
+	def initial_rating_deviation(:v1), do: 350.0
+	def initial_rating_deviation(:v2), do: initial_rating_deviation(:v1) |> scale_rating_deviation_to(:v2)
+
+	@doc """
+	The recommended initial volatility value for a new player.
+	"""
+	@spec initial_v2_volatility :: Glicko.volatility_t
+	def initial_v2_volatility, do: 0.06
+
+	@doc """
 	Creates a new v1 player.
 
-	If not overriden, will use default values for an unrated player.
+	If not overriden, will use the default values for an unrated player.
 	"""
-	@spec new_v1([rating: float, rating_deviation: float]) :: v1_t
-	def new_v1(opts \\ []), do: %__MODULE__{
+	@spec new_v1(
+		{Glicko.rating_t, Glicko.rating_deviation_t} |
+		[rating: Glicko.rating_t, rating_deviation: Glicko.rating_deviation_t]
+	) :: v1_t
+	def new_v1(opts \\ [])
+	def new_v1({rating, rating_deviation}), do: %__MODULE__{
 		version: :v1,
-		rating: Keyword.get(opts, :rating, @default_v1_rating),
-		rating_deviation: Keyword.get(opts, :rating_deviation, @default_v1_rating_deviation),
+		rating: rating,
+		rating_deviation: rating_deviation,
 		volatility: nil,
 	}
+	def new_v1(opts), do: new_v1({
+		Keyword.get(opts, :rating, initial_rating(:v1)),
+		Keyword.get(opts, :rating_deviation, initial_rating_deviation(:v1)),
+	})
 
 	@doc """
 	Creates a new v2 player.
 
 	If not overriden, will use default values for an unrated player.
 	"""
-	@spec new_v2([rating: float, rating_deviation: float, volatility: float]) :: v2_t
-	def new_v2(opts \\ []), do: %__MODULE__{
+	@spec new_v2(
+		{Glicko.rating_t, Glicko.rating_deviation_t, Glicko.volatility_t} |
+		[rating: Glicko.rating_t, rating_deviation: Glicko.rating_deviation_t, volatility: Glicko.volatility_t]
+	) :: v2_t
+	def new_v2(opts \\ [])
+	def new_v2({rating, rating_deviation, volatility}), do: %__MODULE__{
 		version: :v2,
-		rating: Keyword.get(opts, :rating, @default_v1_rating |> scale_rating_to(:v2)),
-		rating_deviation: Keyword.get(opts, :rating_deviation, @default_v1_rating_deviation |> scale_rating_deviation_to(:v2)),
-		volatility: Keyword.get(opts, :volatility, @default_v2_volatility),
+		rating: rating,
+		rating_deviation: rating_deviation,
+		volatility: volatility,
 	}
+	def new_v2(opts), do: new_v2({
+		Keyword.get(opts, :rating, initial_rating(:v2)),
+		Keyword.get(opts, :rating_deviation, initial_rating_deviation(:v2)),
+		Keyword.get(opts, :volatility, initial_v2_volatility()),
+	})
 
 	@doc """
 	Converts a v2 player to a v1.
@@ -99,7 +142,7 @@ defmodule Glicko.Player do
 	A v2 player will pass-through unchanged with the volatility arg ignored.
 	"""
 	@spec to_v2(player :: t, volatility :: float) :: v2_t
-	def to_v2(player, volatility \\ @default_v2_volatility)
+	def to_v2(player, volatility \\ initial_v2_volatility())
 	def to_v2(player = %__MODULE__{version: :v2}, _volatility), do: player
 	def to_v2(player = %__MODULE__{version: :v1}, volatility), do: new_v2([
 		rating: player.rating |> scale_rating_to(:v2),
@@ -131,14 +174,15 @@ defmodule Glicko.Player do
 	@doc """
 	Scales a players rating.
 	"""
-	@spec scale_rating_to(rating :: float, to_version :: :v1 | :v2) :: float
+	@spec scale_rating_to(rating :: Glicko.rating_t, to_version :: Glicko.version_t) :: Glicko.rating_t
 	def scale_rating_to(rating, :v1), do: (rating * @magic_version_scale) + @magic_version_scale_rating
 	def scale_rating_to(rating, :v2), do: (rating - @magic_version_scale_rating) / @magic_version_scale
 
 	@doc """
 	Scales a players rating deviation.
 	"""
-	@spec scale_rating_deviation_to(rating_deviation :: float, to_version :: :v1 | :v2) :: float
+	@spec scale_rating_deviation_to(rating_deviation :: Glicko.rating_deviation_t, to_version :: Glicko.version_t) :: Glicko.rating_deviation_t
 	def scale_rating_deviation_to(rating_deviation, :v1), do: rating_deviation * @magic_version_scale
 	def scale_rating_deviation_to(rating_deviation, :v2), do: rating_deviation / @magic_version_scale
+
 end

@@ -3,7 +3,7 @@ defmodule GlickoTest do
 
 	alias Glicko.{
 		Player,
-		GameResult,
+		Result,
 	}
 
 	doctest Glicko
@@ -11,9 +11,9 @@ defmodule GlickoTest do
 	@player Player.new_v1([rating: 1500, rating_deviation: 200]) |> Player.to_v2
 
 	@results [
-		GameResult.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
-		GameResult.new(Player.new_v1([rating: 1550, rating_deviation: 100]), :loss),
-		GameResult.new(Player.new_v1([rating: 1700, rating_deviation: 300]), :loss),
+		{{1400, 30}, 1.0},
+		Result.new({1550, 100}, :loss),
+		Result.new(Player.new_v1([rating: 1700, rating_deviation: 300]), :loss),
 	]
 
 	@valid_player_rating_after_results 1464.06 |> Player.scale_rating_to(:v2)
