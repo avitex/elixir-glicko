@@ -21,7 +21,6 @@ defmodule Glicko do
 		|> do_new_rating(results, opts)
 		|> Player.to_v1
 	end
-
 	def new_rating(player = %Player{version: :v2}, results, opts) do
 		do_new_rating(player, results, opts)
 	end
@@ -45,7 +44,7 @@ defmodule Glicko do
 				|> Map.put(:opponent_rating_deviation, opponent.rating_deviation)
 				|> Map.put(:opponent_rating_deviation_g, calc_g(opponent.rating_deviation))
 
-			Map.put(result, :e, calc_e(player, result))
+			Map.put(result, :e, calc_e(player.rating, result))
 		end)
 
 		ctx =
@@ -53,7 +52,9 @@ defmodule Glicko do
 			|> Map.put(:system_constant, Keyword.get(opts, :system_constant, @default_system_constant))
 			|> Map.put(:convergence_tolerance, Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance))
 			|> Map.put(:results, results)
-			|> Map.put(:player, player)
+			|> Map.put(:player_rating, player.rating)
+			|> Map.put(:player_volatility, player.volatility)
+			|> Map.put(:player_rating_deviation, player.rating_deviation)
 			|> Map.put(:player_rating_deviation_squared, :math.pow(player.rating_deviation, 2))
 
 		# Step 3
@@ -108,8 +109,8 @@ defmodule Glicko do
 		(x - ctx.alpha) / :math.pow(ctx.system_constant, 2)
 	end
 
-	defp calc_alpha(%{player: player}) do
-		:math.log(:math.pow(player.volatility, 2))
+	defp calc_alpha(ctx) do
+		:math.log(:math.pow(ctx.player_volatility, 2))
 	end
 
 	defp calc_new_player_volatility(%{a: a}) do
@@ -123,7 +124,7 @@ defmodule Glicko do
 	end
 
 	defp calc_new_player_rating(ctx) do
-		ctx.player.rating + :math.pow(ctx.new_player_rating_deviation, 2) * calc_results_effect(ctx)
+		ctx.player_rating + :math.pow(ctx.new_player_rating_deviation, 2) * calc_results_effect(ctx)
 	end
 
 	defp calc_new_player_rating_deviation(ctx) do
@@ -176,7 +177,7 @@ defmodule Glicko do
 	end
 
 	# E function
-	defp calc_e(player, result) do
-		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player.rating - result.opponent_rating)))
+	defp calc_e(player_rating, result) do
+		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player_rating - result.opponent_rating)))
 	end
 end
