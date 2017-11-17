@@ -6,9 +6,6 @@ defmodule Glicko do
 
 	## Usage
 
-	Players can be represented by either the convenience `Glicko.Player` module or a tuple (see `player_t`).
-	Results can be represented by either the convenience `Glicko.Result` module or a tuple (see `result_t`).
-
 	Get a player's new rating after a series of matches in a rating period.
 
 		iex> results = [Result.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
@@ -16,13 +13,13 @@ defmodule Glicko do
 		...> Result.new(Player.new_v1([rating: 1700, rating_deviation: 300]), :loss)]
 		iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
 		iex> Glicko.new_rating(player, results, [system_constant: 0.5])
-		%Glicko.Player{version: :v1, rating: 1464.0506705393013, rating_deviation: 151.51652412385727, volatility: nil}
+		{1464.0506705393013, 151.51652412385727}
 
 	Get a player's new rating when they haven't played within a rating period.
 
 		iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
 		iex> Glicko.new_rating(player, [], [system_constant: 0.5])
-		%Glicko.Player{version: :v1, rating: 1.5e3, rating_deviation: 200.27141669877065, volatility: nil}
+		{1.5e3, 200.27141669877065}
 
 	"""
 
@@ -34,18 +31,6 @@ defmodule Glicko do
 	@default_system_constant 0.8
 	@default_convergence_tolerance 1.0e-7
 
-	@type version_t :: :v1 | :v2
-	@type rating_t :: float
-	@type rating_deviation_t :: float
-	@type volatility_t :: float
-	@type score_t :: float
-
-	@type player_t :: player_v1_t | player_v2_t
-	@type player_v1_t :: {rating :: rating_t, rating_deviation :: rating_deviation_t}
-	@type player_v2_t :: {rating :: rating_t, rating_deviation :: rating_deviation_t, volatility :: volatility_t}
-
-	@type result_t :: {opponent :: player_t, score :: score_t}
-
 	@type new_rating_opts_t :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
@@ -53,11 +38,16 @@ defmodule Glicko do
 
 	Returns the updated player with the same version given to the function.
 	"""
-	@spec new_rating(player :: player_t | Player.t, results :: list(result_t | Result.t), opts :: new_rating_opts_t) :: player_t | Player.t
-	def new_rating(player, results, opts \\ []) do
-		{cast_from, internal_player} = cast_player_to_internal(player)
-		internal_player = do_new_rating(internal_player, results, opts)
-		cast_internal_to_player({cast_from, internal_player})
+	@spec new_rating(player :: Player.t, results :: list(Result.t), opts :: new_rating_opts_t) :: Player.t
+	def new_rating(player, results, opts \\ [])
+	def new_rating(player, results, opts) when tuple_size(player) == 3 do
+		do_new_rating(player, results, opts)
+	end
+	def new_rating(player, results, opts) when tuple_size(player) == 2 do
+		player
+		|> Player.to_v2
+		|> do_new_rating(results, opts)
+		|> Player.to_v1
 	end
 
 	defp do_new_rating({player_rating, player_rating_deviation, player_volatility}, [], _) do
@@ -111,20 +101,15 @@ defmodule Glicko do
 		{ctx.new_player_rating, ctx.new_player_rating_deviation, ctx.new_player_volatility}
 	end
 
-	defp build_internal_result(ctx, {opponent, score}) do
-		{_, {opponent_rating, opponent_rating_deviation, _}} = cast_player_to_internal(opponent)
-
+	defp build_internal_result(ctx, result) do
 		result =
 			Map.new
-			|> Map.put(:score, score)
-			|> Map.put(:opponent_rating, opponent_rating)
-			|> Map.put(:opponent_rating_deviation, opponent_rating_deviation)
-			|> Map.put(:opponent_rating_deviation_g, calc_g(opponent_rating_deviation))
+			|> Map.put(:score, Result.score(result))
+			|> Map.put(:opponent_rating, Result.opponent_rating(result))
+			|> Map.put(:opponent_rating_deviation, Result.opponent_rating_deviation(result))
+			|> Map.put(:opponent_rating_deviation_g, calc_g(Result.opponent_rating_deviation(result)))
 
 		Map.put(result, :e, calc_e(ctx.player_rating, result))
-	end
-	defp build_internal_result(ctx, %Result{score: score, opponent: opponent}) do
-		build_internal_result(ctx, {opponent, score})
 	end
 
 	# Calculation of the estimated variance of the player's rating based on game outcomes
@@ -218,26 +203,4 @@ defmodule Glicko do
 	defp calc_e(player_rating, result) do
 		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player_rating - result.opponent_rating)))
 	end
-
-	defp cast_player_to_internal(player) when is_tuple(player) and tuple_size(player) == 2 do
-		{:v1, Player.new_v1(player) |> Player.to_v2 |> cast_player_to_internal |> elem(1)}
-	end
-	defp cast_player_to_internal(player) when is_tuple(player) and tuple_size(player) == 3 do
-		{:v2, player}
-	end
-	defp cast_player_to_internal(player = %Player{version: :v1}) do
-		{:player_v1, player |> Player.to_v2 |> cast_player_to_internal |> elem(1)}
-	end
-	defp cast_player_to_internal(player = %Player{version: :v2}) do
-		{:player_v2, {player.rating, player.rating_deviation, player.volatility}}
-	end
-
-	defp cast_internal_to_player({:v1, {rating, rating_deviation, _}}), do: {
-		rating |> Player.scale_rating_to(:v1),
-		rating_deviation |> Player.scale_rating_deviation_to(:v1),
-	}
-	defp cast_internal_to_player({:v2, player}), do: player
-	defp cast_internal_to_player({:player_v1, player}), do: Player.new_v2(player) |> Player.to_v1
-	defp cast_internal_to_player({:player_v2, player}), do: Player.new_v2(player)
-
 end

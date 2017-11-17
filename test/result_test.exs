@@ -10,7 +10,7 @@ defmodule Glicko.ResultTest do
 
 	@opponent Player.new_v2
 
-	@valid_game_result %Result{opponent: @opponent, score: 0.0}
+	@valid_game_result Result.new(@opponent, 0.0)
 
 	test "create game result" do
 		assert @valid_game_result == Result.new(@opponent, 0.0)
