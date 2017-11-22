@@ -5,7 +5,7 @@
 
 # Glicko
 
-**Implementation of the [Glicko rating system](http://www.glicko.net/glicko.html).**  
+**Implementation of the [Glicko rating system](http://www.glicko.net/glicko.html).**
 Documentation hosted on [hexdocs](https://hexdocs.pm/glicko).
 
 ## Installation
@@ -14,6 +14,6 @@ Documentation hosted on [hexdocs](https://hexdocs.pm/glicko).
 
   ```elixir
   def deps do
-    [{:glicko, "~> 0.3.0"}]
+    [{:glicko, "~> 0.4.0"}]
   end
   ```
