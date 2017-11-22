@@ -31,14 +31,14 @@ defmodule Glicko do
 	@default_system_constant 0.8
 	@default_convergence_tolerance 1.0e-7
 
-	@type new_rating_opts_t :: [system_constant: float, convergence_tolerance: float]
+	@type new_rating_opts :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
 	Generate a new rating from an existing rating and a series (or lack) of results.
 
 	Returns the updated player with the same version given to the function.
 	"""
-	@spec new_rating(player :: Player.t, results :: list(Result.t), opts :: new_rating_opts_t) :: Player.t
+	@spec new_rating(player :: Player.t, results :: list(Result.t), opts :: new_rating_opts) :: Player.t
 	def new_rating(player, results, opts \\ [])
 	def new_rating(player, results, opts) when tuple_size(player) == 3 do
 		do_new_rating(player, results, opts)
