@@ -50,157 +50,149 @@ defmodule Glicko do
 		|> Player.to_v1
 	end
 
-	defp do_new_rating({player_rating, player_rating_deviation, player_volatility}, [], _) do
-		player_post_rating_deviation = calc_player_pre_rating_deviation(
-			:math.pow(player_rating_deviation, 2),
-			player_volatility
-		)
+	defp do_new_rating({player_r, player_pre_rd, player_v}, [], _) do
+		player_post_rd = calc_player_post_base_rd(:math.pow(player_pre_rd, 2), player_v)
 
-		{player_rating, player_post_rating_deviation, player_volatility}
+		{player_r, player_post_rd, player_v}
 	end
-	defp do_new_rating({player_rating, player_rating_deviation, player_volatility}, results, opts) do
-		ctx =
-			Map.new
-			|> Map.put(:system_constant, Keyword.get(opts, :system_constant, @default_system_constant))
-			|> Map.put(:convergence_tolerance, Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance))
-			|> Map.put(:player_rating, player_rating)
-			|> Map.put(:player_volatility, player_volatility)
-			|> Map.put(:player_rating_deviation, player_rating_deviation)
-			|> Map.put(:player_rating_deviation_squared, :math.pow(player_rating_deviation, 2))
+	defp do_new_rating({player_pre_r, player_pre_rd, player_pre_v}, results, opts) do
+		sys_const = Keyword.get(opts, :system_constant, @default_system_constant)
+		conv_tol = Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance)
 
 		# Init
-		ctx = Map.put(ctx, :results, Enum.map(results, &build_internal_result(ctx, &1)))
-		ctx = Map.put(ctx, :results_effect, calc_results_effect(ctx))
+		player_pre_rd_sq = :math.pow(player_pre_rd, 2)
+		results = Enum.map(results, &build_internal_result(player_pre_r, &1))
+		results_effect = calc_results_effect(results)
 		# Step 3
-		ctx = Map.put(ctx, :variance_estimate, calc_variance_estimate(ctx))
+		variance_est = calc_variance_estimate(results)
 		# Step 4
-		ctx = Map.put(ctx, :delta, calc_delta(ctx))
+		delta = calc_delta(results_effect, variance_est)
 		# Step 5.1
-		ctx = Map.put(ctx, :alpha, calc_alpha(ctx))
+		alpha = calc_alpha(player_pre_v)
 		# Step 5.2
-		{initial_a, initial_b} = iterative_algorithm_initial(ctx)
-		ctx = Map.put(ctx, :initial_a, initial_a)
-		ctx = Map.put(ctx, :initial_b, initial_b)
+		k = calc_k(alpha, delta, player_pre_rd_sq, variance_est, sys_const, 1)
+		{initial_a, initial_b} = iterative_algorithm_initial(
+			alpha, delta, player_pre_rd_sq, variance_est, sys_const, k
+		)
 		# Step 5.3
-		ctx = Map.put(ctx, :initial_fa, calc_f(ctx, ctx.initial_a))
-		ctx = Map.put(ctx, :initial_fb, calc_f(ctx, ctx.initial_b))
+		initial_fa = calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, initial_a)
+		initial_fb = calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, initial_b)
 		# Step 5.4
-		ctx = Map.put(ctx, :a, iterative_algorithm_body(
-			ctx, ctx.initial_a, ctx.initial_b, ctx.initial_fa, ctx.initial_fb
-		))
+		a = iterative_algorithm_body(
+			alpha, delta, player_pre_rd_sq, variance_est, sys_const, conv_tol,
+			initial_a, initial_b, initial_fa, initial_fb
+		)
 		# Step 5.5
-		ctx = Map.put(ctx, :new_player_volatility, calc_new_player_volatility(ctx))
+		player_post_v = calc_new_player_volatility(a)
 		# Step 6
-		ctx = Map.put(ctx, :player_pre_rating_deviation, calc_player_pre_rating_deviation(
-			ctx.player_rating_deviation_squared, ctx.new_player_volatility
-		))
+		player_post_base_rd = calc_player_post_base_rd(player_pre_rd_sq, player_post_v)
 		# Step 7
-		ctx = Map.put(ctx, :new_player_rating_deviation, calc_new_player_rating_deviation(ctx))
-		ctx = Map.put(ctx, :new_player_rating, calc_new_player_rating(ctx))
+		player_post_rd = calc_new_player_rating_deviation(player_post_base_rd, variance_est)
+		player_post_r = calc_new_player_rating(results_effect, player_pre_r, player_post_rd)
 
-		{ctx.new_player_rating, ctx.new_player_rating_deviation, ctx.new_player_volatility}
+		{player_post_r, player_post_rd, player_post_v}
 	end
 
-	defp build_internal_result(ctx, result) do
+	defp build_internal_result(player_pre_r, result) do
 		result =
 			Map.new
 			|> Map.put(:score, Result.score(result))
-			|> Map.put(:opponent_rating, Result.opponent_rating(result))
-			|> Map.put(:opponent_rating_deviation, Result.opponent_rating_deviation(result))
-			|> Map.put(:opponent_rating_deviation_g, calc_g(Result.opponent_rating_deviation(result)))
+			|> Map.put(:opponent_r, Result.opponent_rating(result))
+			|> Map.put(:opponent_rd, Result.opponent_rating_deviation(result))
+			|> Map.put(:opponent_rd_g, calc_g(Result.opponent_rating_deviation(result)))
 
-		Map.put(result, :e, calc_e(ctx.player_rating, result))
+		Map.put(result, :e, calc_e(player_pre_r, result.opponent_r, result.opponent_rd_g))
 	end
 
 	# Calculation of the estimated variance of the player's rating based on game outcomes
-	defp calc_variance_estimate(ctx) do
-		ctx.results
+	defp calc_variance_estimate(results) do
+		results
 		|> Enum.reduce(0.0, fn result, acc ->
-			acc + :math.pow(result.opponent_rating_deviation_g, 2) * result.e * (1 - result.e)
+			acc + :math.pow(result.opponent_rd_g, 2) * result.e * (1 - result.e)
 		end)
 		|> :math.pow(-1)
 	end
 
-	defp calc_delta(ctx) do
-		ctx.results_effect * ctx.variance_estimate
+	defp calc_delta(results_effect, variance_est) do
+		results_effect * variance_est
 	end
 
-	defp calc_f(ctx, x) do
+	defp calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, x) do
 		:math.exp(x) *
-		(:math.pow(ctx.delta, 2) - :math.exp(x) - ctx.player_rating_deviation_squared - ctx.variance_estimate) /
-		(2 * :math.pow(ctx.player_rating_deviation_squared + ctx.variance_estimate + :math.exp(x), 2)) -
-		(x - ctx.alpha) / :math.pow(ctx.system_constant, 2)
+		(:math.pow(delta, 2) - :math.exp(x) - player_pre_rd_sq - variance_est) /
+		(2 * :math.pow(player_pre_rd_sq + variance_est + :math.exp(x), 2)) -
+		(x - alpha) / :math.pow(sys_const, 2)
 	end
 
-	defp calc_alpha(ctx) do
-		:math.log(:math.pow(ctx.player_volatility, 2))
+	defp calc_alpha(player_pre_v) do
+		:math.log(:math.pow(player_pre_v, 2))
 	end
 
-	defp calc_new_player_volatility(%{a: a}) do
+	defp calc_new_player_volatility(a) do
 		:math.exp(a / 2)
 	end
 
-	defp calc_results_effect(ctx) do
-		Enum.reduce(ctx.results, 0.0, fn result, acc ->
-			acc + result.opponent_rating_deviation_g * (result.score - result.e)
+	defp calc_results_effect(results) do
+		Enum.reduce(results, 0.0, fn result, acc ->
+			acc + result.opponent_rd_g * (result.score - result.e)
 		end)
 	end
 
-	defp calc_new_player_rating(ctx) do
-		ctx.player_rating + :math.pow(ctx.new_player_rating_deviation, 2) * ctx.results_effect
+	defp calc_new_player_rating(results_effect, player_pre_r, player_post_rd) do
+		player_pre_r + :math.pow(player_post_rd, 2) * results_effect
 	end
 
-	defp calc_new_player_rating_deviation(ctx) do
-		1 / :math.sqrt(1 / :math.pow(ctx.player_pre_rating_deviation, 2) + 1 / ctx.variance_estimate)
+	defp calc_new_player_rating_deviation(player_post_base_rd, variance_est) do
+		1 / :math.sqrt(1 / :math.pow(player_post_base_rd, 2) + 1 / variance_est)
 	end
 
-	defp calc_player_pre_rating_deviation(player_rating_deviation_squared, player_volatility) do
-		:math.sqrt((:math.pow(player_volatility, 2) + player_rating_deviation_squared))
+	defp calc_player_post_base_rd(player_pre_rd_sq, player_pre_v) do
+		:math.sqrt((:math.pow(player_pre_v, 2) + player_pre_rd_sq))
 	end
 
-	defp iterative_algorithm_initial(ctx) do
-		initial_a = ctx.alpha
+	defp iterative_algorithm_initial(alpha, delta, player_pre_rd_sq, variance_est, sys_const, k) do
+		initial_a = alpha
 		initial_b =
-			if :math.pow(ctx.delta, 2) > ctx.player_rating_deviation_squared + ctx.variance_estimate do
-				:math.log(:math.pow(ctx.delta, 2) - ctx.player_rating_deviation_squared - ctx.variance_estimate)
+			if :math.pow(delta, 2) > player_pre_rd_sq + variance_est do
+				:math.log(:math.pow(delta, 2) - player_pre_rd_sq - variance_est)
 			else
-				ctx.alpha - calc_k(ctx, 1) * ctx.system_constant
+				alpha - k * sys_const
 			end
 
 			{initial_a, initial_b}
 	end
 
-	defp iterative_algorithm_body(ctx, a, b, fa, fb) do
-		if abs(b - a) > ctx.convergence_tolerance do
+	defp iterative_algorithm_body(alpha, delta, player_pre_rd_sq, variance_est, sys_const, conv_tol, a, b, fa, fb) do
+		if abs(b - a) > conv_tol do
 			c = a + (a - b) * fa / (fb - fa)
-			fc = calc_f(ctx, c)
+			fc = calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, c)
 			{a, fa} =
 				if fc * fb < 0 do
 					{b, fb}
 				else
 					{a, fa / 2}
 				end
-			iterative_algorithm_body(ctx, a, c, fa, fc)
+			iterative_algorithm_body(alpha, delta, player_pre_rd_sq, variance_est, sys_const, conv_tol, a, c, fa, fc)
 		else
 			a
 		end
 	end
 
-	defp calc_k(ctx, k) do
-		if calc_f(ctx, ctx.alpha - k * ctx.system_constant) < 0 do
-			calc_k(ctx, k + 1)
+	defp calc_k(alpha, delta, player_pre_rd_sq, variance_est, sys_const, k) do
+		if calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, alpha - k * sys_const) < 0 do
+			calc_k(alpha, delta, player_pre_rd_sq, variance_est, sys_const, k + 1)
 		else
 			k
 		end
 	end
 
 	# g function
-	defp calc_g(rating_deviation) do
-		1 / :math.sqrt(1 + 3 * :math.pow(rating_deviation, 2) / :math.pow(:math.pi, 2))
+	defp calc_g(rd) do
+		1 / :math.sqrt(1 + 3 * :math.pow(rd, 2) / :math.pow(:math.pi, 2))
 	end
 
 	# E function
-	defp calc_e(player_rating, result) do
-		1 / (1 + :math.exp(-1 * result.opponent_rating_deviation_g * (player_rating - result.opponent_rating)))
+	defp calc_e(player_pre_r, opponent_r, opponent_rd_g) do
+		1 / (1 + :math.exp(-1 * opponent_rd_g * (player_pre_r - opponent_r)))
 	end
 end
