@@ -59,12 +59,9 @@ defmodule Glicko do
 		sys_const = Keyword.get(opts, :system_constant, @default_system_constant)
 		conv_tol = Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance)
 
-		# Init
+		# Initialization (skips steps 1, 2 and 3)
 		player_pre_rd_sq = :math.pow(player_pre_rd, 2)
-		results = Enum.map(results, &build_internal_result(player_pre_r, &1))
-		results_effect = calc_results_effect(results)
-		# Step 3
-		variance_est = calc_variance_estimate(results)
+		{variance_est, results_effect} = result_calculations(results, player_pre_r)
 		# Step 4
 		delta = calc_delta(results_effect, variance_est)
 		# Step 5.1
@@ -93,24 +90,23 @@ defmodule Glicko do
 		{player_post_r, player_post_rd, player_post_v}
 	end
 
-	defp build_internal_result(player_pre_r, result) do
-		result =
-			Map.new
-			|> Map.put(:score, Result.score(result))
-			|> Map.put(:opponent_r, Result.opponent_rating(result))
-			|> Map.put(:opponent_rd, Result.opponent_rating_deviation(result))
-			|> Map.put(:opponent_rd_g, calc_g(Result.opponent_rating_deviation(result)))
+	defp result_calculations(results, player_pre_r) do
+		{variance_estimate_acc, result_effect_acc} =
+			Enum.reduce(results, {0.0, 0.0}, fn result, {variance_estimate_acc, result_effect_acc} ->
+				opponent_rd_g =
+					result
+					|> Result.opponent_rating_deviation
+					|> calc_g
 
-		Map.put(result, :e, calc_e(player_pre_r, result.opponent_r, result.opponent_rd_g))
-	end
+				win_probability = calc_e(player_pre_r, Result.opponent_rating(result), opponent_rd_g)
 
-	# Calculation of the estimated variance of the player's rating based on game outcomes
-	defp calc_variance_estimate(results) do
-		results
-		|> Enum.reduce(0.0, fn result, acc ->
-			acc + :math.pow(result.opponent_rd_g, 2) * result.e * (1 - result.e)
-		end)
-		|> :math.pow(-1)
+				{
+					variance_estimate_acc + :math.pow(opponent_rd_g, 2) * win_probability * (1 - win_probability),
+					result_effect_acc + opponent_rd_g * (Result.score(result) - win_probability)
+				}
+			end)
+
+		{:math.pow(variance_estimate_acc, -1), result_effect_acc}
 	end
 
 	defp calc_delta(results_effect, variance_est) do
@@ -130,12 +126,6 @@ defmodule Glicko do
 
 	defp calc_new_player_volatility(a) do
 		:math.exp(a / 2)
-	end
-
-	defp calc_results_effect(results) do
-		Enum.reduce(results, 0.0, fn result, acc ->
-			acc + result.opponent_rd_g * (result.score - result.e)
-		end)
 	end
 
 	defp calc_new_player_rating(results_effect, player_pre_r, player_post_rd) do
