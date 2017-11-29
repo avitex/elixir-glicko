@@ -34,6 +34,28 @@ defmodule Glicko do
 	@type new_rating_opts :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
+	Calculates the probability of a player winning against an opponent from a player and an opponent.
+
+	Returns a value between `0.0` and `1.0`.
+	"""
+	@spec win_probability(player :: Player.t, opponent :: Player.t) :: float
+	def win_probability(player, opponent) do
+		win_probability(player |> Player.rating(:v2), opponent |> Player.rating(:v2), opponent |> Player.rating_deviation(:v2))
+	end
+
+	@doc """
+	Calculates the probability of a player winning against an opponent from a player rating, opponent rating and opponent rating deviation.
+
+	Values provided for the player rating, opponent rating and opponent rating deviation must be *v2* based.
+
+	Returns a value between `0.0` and `1.0`.
+	"""
+	@spec win_probability(player_rating :: Player.rating, opponent_rating :: Player.rating, opponent_rating_deviation :: Player.rating_deviation) :: float
+	def win_probability(player_rating, opponent_rating, opponent_rating_deviation) do
+		calc_e(player_rating, opponent_rating, calc_g(opponent_rating_deviation))
+	end
+
+	@doc """
 	Generate a new rating from an existing rating and a series (or lack) of results.
 
 	Returns the updated player with the same version given to the function.
