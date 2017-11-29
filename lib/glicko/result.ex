@@ -1,6 +1,6 @@
 defmodule Glicko.Result do
 	@moduledoc """
-	Convenience functions for handling a result against an opponent.
+	Provides convenience functions for handling a result against an opponent.
 
 	## Usage
 
@@ -24,6 +24,8 @@ defmodule Glicko.Result do
 
 	@doc """
 	Creates a new result from an opponent rating, opponent rating deviation and score.
+
+	Values provided for the opponent rating and opponent rating deviation must be *v2* based.
 
 	Supports passing either `:loss`, `:draw`, or `:win` as shortcuts.
 	"""
