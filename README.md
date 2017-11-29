@@ -14,6 +14,6 @@ Documentation hosted on [hexdocs](https://hexdocs.pm/glicko).
 
   ```elixir
   def deps do
-    [{:glicko, "~> 0.5.0"}]
+    [{:glicko, "~> 0.6.0"}]
   end
   ```
