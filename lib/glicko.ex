@@ -28,6 +28,13 @@ defmodule Glicko do
 		iex> Glicko.win_probability(player, opponent)
 		0.5
 
+	Calculate the probability of a player drawing against an opponent.
+
+		iex> player = Player.new_v1
+		iex> opponent = Player.new_v1
+		iex> Glicko.draw_probability(player, opponent)
+		1.0
+
 	"""
 
 	alias __MODULE__.{
@@ -41,7 +48,7 @@ defmodule Glicko do
 	@type new_rating_opts :: [system_constant: float, convergence_tolerance: float]
 
 	@doc """
-	Calculates the probability of a player winning against an opponent from a player and an opponent.
+	Calculates the probability of a player winning against an opponent.
 
 	Returns a value between `0.0` and `1.0`.
 	"""
@@ -60,6 +67,28 @@ defmodule Glicko do
 	@spec win_probability(player_rating :: Player.rating, opponent_rating :: Player.rating, opponent_rating_deviation :: Player.rating_deviation) :: float
 	def win_probability(player_rating, opponent_rating, opponent_rating_deviation) do
 		calc_e(player_rating, opponent_rating, calc_g(opponent_rating_deviation))
+	end
+
+	@doc """
+	Calculates the probability of a player drawing against an opponent.
+
+	Returns a value between `0.0` and `1.0`.
+	"""
+	@spec draw_probability(player :: Player.t, opponent :: Player.t) :: float
+	def draw_probability(player, opponent) do
+		draw_probability(player |> Player.rating(:v2), opponent |> Player.rating(:v2), opponent |> Player.rating_deviation(:v2))
+	end
+
+	@doc """
+	Calculates the probability of a player drawing against an opponent from a player rating, opponent rating and opponent rating deviation.
+
+	Values provided for the player rating, opponent rating and opponent rating deviation must be *v2* based.
+
+	Returns a value between `0.0` and `1.0`.
+	"""
+	@spec draw_probability(player_rating :: Player.rating, opponent_rating :: Player.rating, opponent_rating_deviation :: Player.rating_deviation) :: float
+	def draw_probability(player_rating, opponent_rating, opponent_rating_deviation) do
+		1 - abs(win_probability(player_rating, opponent_rating, opponent_rating_deviation) - 0.5) / 0.5
 	end
 
 	@doc """

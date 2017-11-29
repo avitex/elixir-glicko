@@ -22,29 +22,47 @@ defmodule GlickoTest do
 
 	@valid_player_rating_deviation_after_no_results 200.2714 |> Player.scale_rating_deviation_to(:v2)
 
-	test "new rating (with results)" do
-		player = Glicko.new_rating(@player, @results, [system_constant: 0.5])
-
-		assert_in_delta Player.rating(player), @valid_player_rating_after_results, 1.0e-4
-		assert_in_delta Player.rating_deviation(player), @valid_player_rating_deviation_after_results, 1.0e-4
-		assert_in_delta Player.volatility(player), @valid_player_volatility_after_results, 1.0e-5
+	describe "new rating" do
+		test "with results" do
+			player = Glicko.new_rating(@player, @results, [system_constant: 0.5])
+	
+			assert_in_delta Player.rating(player), @valid_player_rating_after_results, 1.0e-4
+			assert_in_delta Player.rating_deviation(player), @valid_player_rating_deviation_after_results, 1.0e-4
+			assert_in_delta Player.volatility(player), @valid_player_volatility_after_results, 1.0e-5
+		end
+	
+		test "no results" do
+			player = Glicko.new_rating(@player, [])
+	
+			assert_in_delta Player.rating_deviation(player), @valid_player_rating_deviation_after_no_results, 1.0e-4
+		end
 	end
 
-	test "new rating (no results)" do
-		player = Glicko.new_rating(@player, [])
-
-		assert_in_delta Player.rating_deviation(player), @valid_player_rating_deviation_after_no_results, 1.0e-4
+	describe "win probability" do
+		test "with same ratings" do
+			assert Glicko.win_probability(Player.new_v1, Player.new_v1) == 0.5
+		end
+	
+		test "with better opponent" do
+			assert Glicko.win_probability(Player.new_v1([rating: 1500]), Player.new_v1([rating: 1600])) < 0.5
+		end
+	
+		test "with better player" do
+			assert Glicko.win_probability(Player.new_v1([rating: 1600]), Player.new_v1([rating: 1500])) > 0.5
+		end
 	end
-
-	test "win probability with same ratings" do
-		assert Glicko.win_probability(Player.new_v1, Player.new_v1) == 0.5
-	end
-
-	test "win probability with better opponent" do
-		assert Glicko.win_probability(Player.new_v1([rating: 1500]), Player.new_v1([rating: 1600])) < 0.5
-	end
-
-	test "win probability with better player" do
-		assert Glicko.win_probability(Player.new_v1([rating: 1600]), Player.new_v1([rating: 1500])) > 0.5
+	
+	describe "draw probability" do
+		test "with same ratings" do
+			assert Glicko.draw_probability(Player.new_v1, Player.new_v1) == 1
+		end
+	
+		test "with better opponent" do
+			assert Glicko.draw_probability(Player.new_v1([rating: 1500]), Player.new_v1([rating: 1600])) < 1
+		end
+	
+		test "with better player" do
+			assert Glicko.draw_probability(Player.new_v1([rating: 1600]), Player.new_v1([rating: 1500])) < 1
+		end
 	end
 end
