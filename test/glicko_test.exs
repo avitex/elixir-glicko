@@ -8,7 +8,7 @@ defmodule GlickoTest do
 
 	doctest Glicko
 
-	@player Player.new_v1([rating: 1500, rating_deviation: 200]) |> Player.to_v2
+	@player [rating: 1500, rating_deviation: 200] |> Player.new_v1 |> Player.to_v2
 
 	@results [
 		Result.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
