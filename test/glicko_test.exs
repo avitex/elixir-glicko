@@ -35,4 +35,16 @@ defmodule GlickoTest do
 
 		assert_in_delta Player.rating_deviation(player), @valid_player_rating_deviation_after_no_results, 1.0e-4
 	end
+
+	test "win probability with same ratings" do
+		assert Glicko.win_probability(Player.new_v1, Player.new_v1) == 0.5
+	end
+
+	test "win probability with better opponent" do
+		assert Glicko.win_probability(Player.new_v1([rating: 1500]), Player.new_v1([rating: 1600])) < 0.5
+	end
+
+	test "win probability with better player" do
+		assert Glicko.win_probability(Player.new_v1([rating: 1600]), Player.new_v1([rating: 1500])) > 0.5
+	end
 end

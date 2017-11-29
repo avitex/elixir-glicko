@@ -21,6 +21,13 @@ defmodule Glicko do
 		iex> Glicko.new_rating(player, [], [system_constant: 0.5])
 		{1.5e3, 200.27141669877065}
 
+	Calculate the probability of a player winning against an opponent.
+
+		iex> player = Player.new_v1
+		iex> opponent = Player.new_v1
+		iex> Glicko.win_probability(player, opponent)
+		0.5
+
 	"""
 
 	alias __MODULE__.{
