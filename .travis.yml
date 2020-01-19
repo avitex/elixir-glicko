@@ -1,11 +1,11 @@
 language: elixir
 elixir:
-  - 1.5.0
+  - 1.9.4
 notifications:
   recipients:
     - theavitex@gmail.com
 otp_release:
-  - 18.2
+  - 22.1
 env:
   - MIX_ENV=test
 script:
