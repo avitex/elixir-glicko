@@ -56,7 +56,10 @@ defmodule Glicko.Player do
   """
   @spec initial_rating(version) :: rating
   def initial_rating(_version = :v1), do: 1500.0
-  def initial_rating(_version = :v2), do: :v1 |> initial_rating |> scale_rating_to(:v2)
+
+  def initial_rating(_version = :v2) do
+    :v1 |> initial_rating |> scale_rating_to(:v2)
+  end
 
   @doc """
   The recommended initial rating deviation value for a new player.
@@ -64,8 +67,9 @@ defmodule Glicko.Player do
   @spec initial_rating_deviation(version) :: rating_deviation
   def initial_rating_deviation(_version = :v1), do: 350.0
 
-  def initial_rating_deviation(_version = :v2),
-    do: :v1 |> initial_rating_deviation |> scale_rating_deviation_to(:v2)
+  def initial_rating_deviation(_version = :v2) do
+    :v1 |> initial_rating_deviation |> scale_rating_deviation_to(:v2)
+  end
 
   @doc """
   The recommended initial volatility value for a new player.
@@ -79,11 +83,12 @@ defmodule Glicko.Player do
   If not overriden, will use the default values for an unrated player.
   """
   @spec new_v1(rating: rating, rating_deviation: rating_deviation) :: v1
-  def new_v1(opts \\ []) when is_list(opts),
-    do: {
+  def new_v1(opts \\ []) when is_list(opts) do
+    {
       Keyword.get(opts, :rating, initial_rating(:v1)),
       Keyword.get(opts, :rating_deviation, initial_rating_deviation(:v1))
     }
+  end
 
   @doc """
   Creates a new v2 player.
@@ -91,12 +96,13 @@ defmodule Glicko.Player do
   If not overriden, will use default values for an unrated player.
   """
   @spec new_v2(rating: rating, rating_deviation: rating_deviation, volatility: volatility) :: v2
-  def new_v2(opts \\ []) when is_list(opts),
-    do: {
+  def new_v2(opts \\ []) when is_list(opts) do
+    {
       Keyword.get(opts, :rating, initial_rating(:v2)),
       Keyword.get(opts, :rating_deviation, initial_rating_deviation(:v2)),
       Keyword.get(opts, :volatility, initial_volatility())
     }
+  end
 
   @doc """
   Converts a v2 player to a v1.
@@ -108,11 +114,12 @@ defmodule Glicko.Player do
   @spec to_v1(player :: t) :: v1
   def to_v1({rating, rating_deviation}), do: {rating, rating_deviation}
 
-  def to_v1({rating, rating_deviation, _}),
-    do: {
+  def to_v1({rating, rating_deviation, _}) do
+    {
       rating |> scale_rating_to(:v1),
       rating_deviation |> scale_rating_deviation_to(:v1)
     }
+  end
 
   @doc """
   Converts a v1 player to a v2.
@@ -125,12 +132,13 @@ defmodule Glicko.Player do
   def to_v2({rating, rating_deviation, volatility}, _volatility),
     do: {rating, rating_deviation, volatility}
 
-  def to_v2({rating, rating_deviation}, volatility),
-    do: {
+  def to_v2({rating, rating_deviation}, volatility) do
+    {
       rating |> scale_rating_to(:v2),
       rating_deviation |> scale_rating_deviation_to(:v2),
       volatility
     }
+  end
 
   @doc """
   A version agnostic method for getting a player's rating.
@@ -185,11 +193,12 @@ defmodule Glicko.Player do
   be 95% confident about a player’s strength being in a small interval of values.
   """
   @spec rating_interval(player :: t) :: {rating_low :: float, rating_high :: float}
-  def rating_interval(player, as_version \\ nil),
-    do: {
+  def rating_interval(player, as_version \\ nil) do
+    {
       rating(player, as_version) - rating_deviation(player, as_version) * 2,
       rating(player, as_version) + rating_deviation(player, as_version) * 2
     }
+  end
 
   @doc """
   Scales a player's rating.

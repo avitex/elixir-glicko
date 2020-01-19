@@ -5,8 +5,8 @@ defmodule Glicko.Mixfile do
   Implementation of the Glicko rating system
   """
 
-  def project,
-    do: [
+  def project do
+    [
       app: :glicko,
       version: "0.6.0",
       elixir: "~> 1.9",
@@ -15,19 +15,22 @@ defmodule Glicko.Mixfile do
       package: package(),
       description: @description
     ]
+  end
 
-  defp deps,
-    do: [
+  defp deps do
+    [
       {:inch_ex, "~> 0.5", only: :docs},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false},
       {:credo, "~> 0.8", only: [:dev, :test], runtime: false}
     ]
+  end
 
-  defp package,
-    do: [
+  defp package do
+    [
       name: :glicko,
       maintainers: ["James Dyson"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/avitex/elixir-glicko"}
     ]
+  end
 end
