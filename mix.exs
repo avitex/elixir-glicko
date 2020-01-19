@@ -9,7 +9,7 @@ defmodule Glicko.Mixfile do
     do: [
       app: :glicko,
       version: "0.6.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
