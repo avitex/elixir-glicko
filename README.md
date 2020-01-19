@@ -5,15 +5,15 @@
 
 # Glicko
 
-**Implementation of the [Glicko rating system](http://www.glicko.net/glicko.html).**
+**Implementation of the [Glicko rating system](http://www.glicko.net/glicko.html).**  
 Documentation hosted on [hexdocs](https://hexdocs.pm/glicko).
 
 ## Installation
 
-  Add `glicko` to your list of dependencies in `mix.exs`:
+Add `glicko` to your list of dependencies in `mix.exs`:
 
-  ```elixir
-  def deps do
-    [{:glicko, "~> 0.6.0"}]
-  end
-  ```
+```elixir
+def deps do
+  [{:glicko, "~> 0.6.0"}]
+end
+```
