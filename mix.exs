@@ -19,7 +19,7 @@ defmodule Glicko.Mixfile do
 
   defp deps do
     [
-      {:inch_ex, "~> 0.5", only: :docs},
+      {:inch_ex, "~> 2.0", only: [:dev, :docs]},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false},
       {:credo, "~> 0.8", only: [:dev, :test], runtime: false}
     ]
