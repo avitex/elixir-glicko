@@ -8,7 +8,7 @@ defmodule Glicko.ResultTest do
 
   doctest Result
 
-  @opponent Player.new_v2()
+  @opponent %Player.V2{}
 
   @valid_game_result Result.new(@opponent, 0.0)
 

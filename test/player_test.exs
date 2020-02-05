@@ -5,25 +5,30 @@ defmodule Glicko.PlayerTest do
 
   doctest Player
 
-  @valid_v1_base {1.0, 2.0}
-  @valid_v2_base {1.0, 2.0, 3.0}
+  @valid_v1_base %Player.V1{rating: 1.0, rating_deviation: 2.0}
+  @valid_v2_base %Player.V2{rating: 1.0, rating_deviation: 2.0, volatility: 3.0}
 
   test "create v1" do
-    assert @valid_v1_base == Player.new_v1(rating: 1.0, rating_deviation: 2.0)
+    assert @valid_v1_base == %Player.V1{rating: 1.0, rating_deviation: 2.0}
   end
 
   test "create v2" do
-    assert @valid_v2_base == Player.new_v2(rating: 1.0, rating_deviation: 2.0, volatility: 3.0)
+    assert @valid_v2_base == %Player.V2{rating: 1.0, rating_deviation: 2.0, volatility: 3.0}
   end
 
   test "convert player v1 -> v2" do
-    assert {Player.scale_rating_to(1.0, :v2), Player.scale_rating_deviation_to(2.0, :v2), 3.0} ==
-             Player.to_v2(@valid_v1_base, 3.0)
+    assert %Player.V2{
+             rating: Player.scale_rating_to(1.0, :v2),
+             rating_deviation: Player.scale_rating_deviation_to(2.0, :v2),
+             volatility: 3.0
+           } == Player.to_v2(@valid_v1_base, 3.0)
   end
 
   test "convert player v2 -> v1" do
-    assert {Player.scale_rating_to(1.0, :v1), Player.scale_rating_deviation_to(2.0, :v1)} ==
-             Player.to_v1(@valid_v2_base)
+    assert %Player.V1{
+             rating: Player.scale_rating_to(1.0, :v1),
+             rating_deviation: Player.scale_rating_deviation_to(2.0, :v1)
+           } == Player.to_v1(@valid_v2_base)
   end
 
   test "convert player v1 -> v1" do
@@ -52,8 +57,7 @@ defmodule Glicko.PlayerTest do
 
   test "rating interval" do
     assert {rating_low, rating_high} =
-             [rating: 1850, rating_deviation: 50]
-             |> Player.new_v2()
+             %Player.V2{rating: 1850, rating_deviation: 50}
              |> Player.rating_interval()
 
     assert_in_delta rating_low, 1750, 0.1

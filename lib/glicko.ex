@@ -8,30 +8,30 @@ defmodule Glicko do
 
   Get a player's new rating after a series of matches in a rating period.
 
-      iex> results = [Result.new(Player.new_v1([rating: 1400, rating_deviation: 30]), :win),
-      ...> Result.new(Player.new_v1([rating: 1550, rating_deviation: 100]), :loss),
-      ...> Result.new(Player.new_v1([rating: 1700, rating_deviation: 300]), :loss)]
-      iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
+      iex> results = [Result.new(%Player.V1{rating: 1400, rating_deviation: 30}, :win),
+      ...> Result.new(%Player.V1{rating: 1550, rating_deviation: 100}, :loss),
+      ...> Result.new(%Player.V1{rating: 1700, rating_deviation: 300}, :loss)]
+      iex> player = %Player.V1{rating: 1500, rating_deviation: 200}
       iex> Glicko.new_rating(player, results, [system_constant: 0.5])
-      {1464.0506705393013, 151.51652412385727}
+      %Player.V1{rating: 1464.0506705393013, rating_deviation: 151.51652412385727}
 
   Get a player's new rating when they haven't played within a rating period.
 
-      iex> player = Player.new_v1([rating: 1500, rating_deviation: 200])
+      iex> player = %Player.V1{rating: 1500, rating_deviation: 200}
       iex> Glicko.new_rating(player, [], [system_constant: 0.5])
-      {1.5e3, 200.27141669877065}
+      %Player.V1{rating: 1.5e3, rating_deviation: 200.27141669877065}
 
   Calculate the probability of a player winning against an opponent.
 
-      iex> player = Player.new_v1
-      iex> opponent = Player.new_v1
+      iex> player = %Player.V1{}
+      iex> opponent = %Player.V1{}
       iex> Glicko.win_probability(player, opponent)
       0.5
 
   Calculate the probability of a player drawing against an opponent.
 
-      iex> player = Player.new_v1
-      iex> opponent = Player.new_v1
+      iex> player = %Player.V1{}
+      iex> opponent = %Player.V1{}
       iex> Glicko.draw_probability(player, opponent)
       1.0
 
@@ -117,24 +117,33 @@ defmodule Glicko do
           Player.t()
   def new_rating(player, results, opts \\ [])
 
-  def new_rating(player, results, opts) when tuple_size(player) == 3 do
+  def new_rating(%Player.V2{} = player, results, opts) do
     do_new_rating(player, results, opts)
   end
 
-  def new_rating(player, results, opts) when tuple_size(player) == 2 do
+  def new_rating(%Player.V1{} = player, results, opts) do
     player
     |> Player.to_v2()
     |> do_new_rating(results, opts)
     |> Player.to_v1()
   end
 
-  defp do_new_rating({player_r, player_pre_rd, player_v}, [], _) do
-    player_post_rd = calc_player_post_base_rd(:math.pow(player_pre_rd, 2), player_v)
+  defp do_new_rating(%Player.V2{} = player, [], _) do
+    player_post_rd =
+      calc_player_post_base_rd(:math.pow(player.rating_deviation, 2), player.volatility)
 
-    {player_r, player_post_rd, player_v}
+    %{player | rating_deviation: player_post_rd}
   end
 
-  defp do_new_rating({player_pre_r, player_pre_rd, player_pre_v}, results, opts) do
+  defp do_new_rating(
+         %Player.V2{
+           rating: player_pre_r,
+           rating_deviation: player_pre_rd,
+           volatility: player_pre_v
+         },
+         results,
+         opts
+       ) do
     sys_const = Keyword.get(opts, :system_constant, @default_system_constant)
     conv_tol = Keyword.get(opts, :convergence_tolerance, @default_convergence_tolerance)
 
@@ -184,23 +193,24 @@ defmodule Glicko do
     player_post_rd = calc_new_player_rating_deviation(player_post_base_rd, variance_est)
     player_post_r = calc_new_player_rating(results_effect, player_pre_r, player_post_rd)
 
-    {player_post_r, player_post_rd, player_post_v}
+    %Player.V2{
+      rating: player_post_r,
+      rating_deviation: player_post_rd,
+      volatility: player_post_v
+    }
   end
 
   defp result_calculations(results, player_pre_r) do
     {variance_estimate_acc, result_effect_acc} =
       Enum.reduce(results, {0.0, 0.0}, fn result, {variance_estimate_acc, result_effect_acc} ->
-        opponent_rd_g =
-          result
-          |> Result.opponent_rating_deviation()
-          |> calc_g
+        opponent_rd_g = calc_g(result.rating_deviation)
 
-        win_probability = calc_e(player_pre_r, Result.opponent_rating(result), opponent_rd_g)
+        win_probability = calc_e(player_pre_r, result.rating, opponent_rd_g)
 
         {
           variance_estimate_acc +
             :math.pow(opponent_rd_g, 2) * win_probability * (1 - win_probability),
-          result_effect_acc + opponent_rd_g * (Result.score(result) - win_probability)
+          result_effect_acc + opponent_rd_g * (result.score - win_probability)
         }
       end)
 

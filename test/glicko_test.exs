@@ -8,12 +8,12 @@ defmodule GlickoTest do
 
   doctest Glicko
 
-  @player [rating: 1500, rating_deviation: 200] |> Player.new_v1() |> Player.to_v2()
+  @player %Player.V1{rating: 1500, rating_deviation: 200} |> Player.to_v2()
 
   @results [
-    Result.new(Player.new_v1(rating: 1400, rating_deviation: 30), :win),
-    Result.new(Player.new_v1(rating: 1550, rating_deviation: 100), :loss),
-    Result.new(Player.new_v1(rating: 1700, rating_deviation: 300), :loss)
+    Result.new(%Player.V1{rating: 1400, rating_deviation: 30}, :win),
+    Result.new(%Player.V1{rating: 1550, rating_deviation: 100}, :loss),
+    Result.new(%Player.V1{rating: 1700, rating_deviation: 300}, :loss)
   ]
 
   @valid_player_rating_after_results 1464.06 |> Player.scale_rating_to(:v2)
@@ -47,31 +47,31 @@ defmodule GlickoTest do
 
   describe "win probability" do
     test "with same ratings" do
-      assert Glicko.win_probability(Player.new_v1(), Player.new_v1()) == 0.5
+      assert Glicko.win_probability(%Player.V1{}, %Player.V1{}) == 0.5
     end
 
     test "with better opponent" do
-      assert Glicko.win_probability(Player.new_v1(rating: 1500), Player.new_v1(rating: 1600)) <
+      assert Glicko.win_probability(%Player.V1{rating: 1500}, %Player.V1{rating: 1600}) <
                0.5
     end
 
     test "with better player" do
-      assert Glicko.win_probability(Player.new_v1(rating: 1600), Player.new_v1(rating: 1500)) >
+      assert Glicko.win_probability(%Player.V1{rating: 1600}, %Player.V1{rating: 1500}) >
                0.5
     end
   end
 
   describe "draw probability" do
     test "with same ratings" do
-      assert Glicko.draw_probability(Player.new_v1(), Player.new_v1()) == 1
+      assert Glicko.draw_probability(%Player.V1{}, %Player.V1{}) == 1
     end
 
     test "with better opponent" do
-      assert Glicko.draw_probability(Player.new_v1(rating: 1500), Player.new_v1(rating: 1600)) < 1
+      assert Glicko.draw_probability(%Player.V1{rating: 1500}, %Player.V1{rating: 1600}) < 1
     end
 
     test "with better player" do
-      assert Glicko.draw_probability(Player.new_v1(rating: 1600), Player.new_v1(rating: 1500)) < 1
+      assert Glicko.draw_probability(%Player.V1{rating: 1600}, %Player.V1{rating: 1500}) < 1
     end
   end
 end
