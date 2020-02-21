@@ -143,7 +143,7 @@ defmodule Glicko.Player do
   @doc """
   A version agnostic method for getting a player's rating.
   """
-  @spec rating(player :: t, as_version :: version) :: rating
+  @spec rating(player :: t, as_version :: version | nil) :: rating
   def rating(player, as_version \\ nil)
   def rating({rating, _}, nil), do: rating
   def rating({rating, _, _}, nil), do: rating
@@ -155,7 +155,7 @@ defmodule Glicko.Player do
   @doc """
   A version agnostic method for getting a player's rating deviation.
   """
-  @spec rating_deviation(player :: t, as_version :: version) :: rating_deviation
+  @spec rating_deviation(player :: t, as_version :: version | nil) :: rating_deviation
   def rating_deviation(player, as_version \\ nil)
   def rating_deviation({_, rating_deviation}, nil), do: rating_deviation
   def rating_deviation({_, rating_deviation, _}, nil), do: rating_deviation
@@ -192,7 +192,7 @@ defmodule Glicko.Player do
   When a player has a low RD, the interval would be narrow, so that we would
   be 95% confident about a player’s strength being in a small interval of values.
   """
-  @spec rating_interval(player :: t) :: {rating_low :: float, rating_high :: float}
+  @spec rating_interval(player :: t, as_version :: version | nil) :: {rating_low :: float, rating_high :: float}
   def rating_interval(player, as_version \\ nil) do
     {
       rating(player, as_version) - rating_deviation(player, as_version) * 2,

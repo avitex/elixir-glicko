@@ -52,18 +52,18 @@ defmodule Glicko.Result do
   @doc """
   Convenience function for accessing an opponent's rating.
   """
-  @spec opponent_rating(result :: Result.t()) :: Player.rating()
+  @spec opponent_rating(result :: t()) :: Player.rating()
   def opponent_rating(_result = {rating, _, _}), do: rating
 
   @doc """
   Convenience function for accessing an opponent's rating deviation.
   """
-  @spec opponent_rating_deviation(result :: Result.t()) :: Player.rating_deviation()
+  @spec opponent_rating_deviation(result :: t()) :: Player.rating_deviation()
   def opponent_rating_deviation(_result = {_, rating_deviation, _}), do: rating_deviation
 
   @doc """
   Convenience function for accessing the score.
   """
-  @spec score(result :: Result.t()) :: score
+  @spec score(result :: t()) :: score
   def score(_result = {_, _, score}), do: score
 end
