@@ -21,7 +21,7 @@ defmodule Glicko.Mixfile do
     [
       {:inch_ex, "~> 2.0", only: [:dev, :docs]},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:credo, "~> 0.8", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.3", only: [:dev, :test], runtime: false}
     ]
   end
 
