@@ -268,7 +268,7 @@ defmodule Glicko do
       fc = calc_f(alpha, delta, player_pre_rd_sq, variance_est, sys_const, c)
 
       {a, fa} =
-        if fc * fb < 0 do
+        if fc * fb <= 0 do
           {b, fb}
         else
           {a, fa / 2}
