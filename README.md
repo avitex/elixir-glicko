@@ -14,6 +14,6 @@ Add `glicko` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:glicko, "~> 0.7.0"}]
+  [{:glicko, "~> 0.8.0"}]
 end
 ```
