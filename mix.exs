@@ -8,7 +8,7 @@ defmodule Glicko.Mixfile do
   def project do
     [
       app: :glicko,
-      version: "0.8.0",
+      version: "0.8.1",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
